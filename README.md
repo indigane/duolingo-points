@@ -1,2 +1,1 @@
-# duolingo-points
-Watch your Duolingo numbers go up
+# Watch your Duolingo numbers go up
