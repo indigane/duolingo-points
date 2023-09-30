@@ -25,10 +25,12 @@ async function initPage() {
       background: #131f24;
     }
     .chart-container {
+      --scaling: 1.75;
       position: relative;
-      width: 100%;
-      max-width: 800px;
+      width: calc(100vw * var(--scaling));
+      max-width: calc(800px * var(--scaling));
       aspect-ratio: 4 / 3;
+      transform: scale(calc(1 / var(--scaling)));
     }
   `;
   const styleSheet = document.createElement('style');
