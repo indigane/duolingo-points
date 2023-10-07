@@ -1,6 +1,8 @@
 const jwtToken = document.cookie.split('jwt_token=').pop().split(';').shift();
 const userId = JSON.parse(atob(jwtToken.split('.')[1])).sub;
 const headers = {'Authorization': `Bearer ${jwtToken}`};
+// Based on old goal in the app itself
+const targetAmountPerMonth = 1000;
 
 function addScript(url) {
   const scriptElement = document.createElement('script');
@@ -46,12 +48,16 @@ async function initPage() {
 
 async function initMonthlyChart() {
   const today = new Date();
-  const firstDayOfMonthIsoStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-01`;
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const firstDayOfMonthIsoStr = `${year}-${month.toString().padStart(2, '0')}-01`;
+  // This works because month is zero-based in JS and 0 as day gives the last day of the previous month
+  const daysInThisMonth = new Date(year, month, 0).getDate();
   const response = await fetch(`https://www.duolingo.com/2017-06-30/users/${userId}/xp_summaries?startDate=${firstDayOfMonthIsoStr}`, {headers});
   const data = await response.json();
   const days = [];
-  const xpPerDay = [];
-  const xpPerDayCumulative = [];
+  const xpPerDay = [0];
+  const xpPerDayCumulative = [0];
   data.summaries.reverse();
   for (const summary of data.summaries) {
     const previousDayXp = xpPerDayCumulative.at(-1) || 0;
@@ -61,6 +67,14 @@ async function initMonthlyChart() {
     const summaryDay = parseInt(new Date(summary.date * 1000).toISOString().split('T').shift().split('-').pop());
     days.push(summaryDay);
   }
+  // Pad the x-axis to the end of the month
+  for (dayIndex = 0; dayIndex < daysInThisMonth; dayIndex++) {
+    if (days[dayIndex] === undefined) {
+      days.push(dayIndex + 1);
+    }
+  }
+  // Add "zeroth" day so that the line starts nicely from the origin
+  days.unshift('');
   const monthlyChartCanvas = document.querySelector('#monthly-chart');
   new Chart(monthlyChartCanvas, {
     type: 'line',
@@ -82,8 +96,9 @@ async function initMonthlyChart() {
       },
       scales: {
         y: {
-          beginAtZero: true,
+          min: 0,
         },
+        x: {},
       },
       plugins: {
         legend: {
@@ -94,10 +109,19 @@ async function initMonthlyChart() {
           annotations: {
             line1: {
               type: 'line',
-              yMin: 1000,
-              yMax: 1000,
+              yMin: targetAmountPerMonth,
+              yMax: targetAmountPerMonth,
               borderColor: 'rgb(255, 99, 132)',
               borderWidth: 2,
+              drawTime: 'beforeDraw',
+            },
+            line2: {
+              type: 'line',
+              yMin: 0,
+              yMax: targetAmountPerMonth,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: 2,
+              borderDash: [5, 15],
               drawTime: 'beforeDraw',
             },
           },
